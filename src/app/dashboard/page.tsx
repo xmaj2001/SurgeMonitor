@@ -3,11 +3,22 @@ import { Suspense } from "react";
 import OutbreakCard from "@/components/Outbreak/OutbreakCard";
 import AlertFeed from "@/components/Outbreak/AlertFeed";
 
-// SSR + ISR — dados frescos a cada 1 hora
-export const revalidate = 3600;
+// Dinâmico — nunca pre-renderizar no build (depende de curl + API externa)
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const { outbreaks, total } = await fetchOutbreaksFromReliefWeb({ limit: 20 });
+  let outbreaks: Awaited<
+    ReturnType<typeof fetchOutbreaksFromReliefWeb>
+  >["outbreaks"] = [];
+  let total = 0;
+
+  try {
+    const result = await fetchOutbreaksFromReliefWeb({ limit: 20 });
+    outbreaks = result.outbreaks;
+    total = result.total;
+  } catch (err) {
+    console.error("[Dashboard] Falha ao buscar dados:", err);
+  }
 
   const critical = outbreaks.filter((o) => o.severity === "critical");
   const high = outbreaks.filter((o) => o.severity === "high");

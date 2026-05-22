@@ -5,8 +5,7 @@ import { execSync } from "child_process";
 // ─── Configuração ────────────────────────────────────────────────────────
 // ReliefWeb API v1 foi desactivada. API v2 exige appname pré-aprovado.
 // Solução: usar o feed RSS público (não precisa de autenticação).
-const RELIEFWEB_RSS =
-  "https://reliefweb.int/updates/rss.xml";
+const RELIEFWEB_RSS = "https://reliefweb.int/updates/rss.xml";
 
 // Doenças que nos interessam — usadas no search param do RSS
 const TRACKED_DISEASES = [
@@ -160,7 +159,6 @@ export async function fetchOutbreaksFromReliefWeb(options?: {
 
   const parsed = xmlParser.parse(xml);
 
-
   const items: RSSItem[] = parsed?.rss?.channel?.item ?? [];
 
   // Converter itens RSS → Outbreak[], filtrar para África
@@ -170,8 +168,7 @@ export async function fetchOutbreaksFromReliefWeb(options?: {
     const title = item.title ?? "";
     const description = item.description ?? "";
     const countryName = extractCountryFromDesc(description);
-    const link =
-      typeof item.guid === "object" ? item.guid["#text"] : item.link;
+    const link = typeof item.guid === "object" ? item.guid["#text"] : item.link;
 
     // Filtrar: só países africanos (ignorar "World", etc.)
     if (countryName === "Unknown" || countryName === "World") {
