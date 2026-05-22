@@ -1,9 +1,29 @@
 import type { Outbreak, DiseaseSeverity } from "@/lib/types";
+import { XMLParser } from "fast-xml-parser";
+import { execSync } from "child_process";
 
-const RELIEFWEB_API = "https://api.reliefweb.int/v1";
-const APP_NAME = "africa-disease-monitor"; // obrigatório nos headers
+// ─── Configuração ────────────────────────────────────────────────────────
+// ReliefWeb API v1 foi desactivada. API v2 exige appname pré-aprovado.
+// Solução: usar o feed RSS público (não precisa de autenticação).
+const RELIEFWEB_RSS =
+  "https://reliefweb.int/updates/rss.xml";
 
-// Mapeamento de doenças para severity
+// Doenças que nos interessam — usadas no search param do RSS
+const TRACKED_DISEASES = [
+  "cholera",
+  "malaria",
+  "ebola",
+  "mpox",
+  "meningitis",
+  "measles",
+  "marburg",
+  "plague",
+  "yellow fever",
+  "dengue",
+  "typhoid",
+];
+
+// ─── Severity ────────────────────────────────────────────────────────────
 const DISEASE_SEVERITY_MAP: Record<string, DiseaseSeverity> = {
   ebola: "critical",
   marburg: "critical",
@@ -28,18 +48,15 @@ function getSeverity(title: string): DiseaseSeverity {
 }
 
 function extractDisease(title: string): string {
-  const diseases = Object.keys(DISEASE_SEVERITY_MAP).filter(
-    (d) => d !== "default",
-  );
   const lower = title.toLowerCase();
-  for (const d of diseases) {
+  for (const d of TRACKED_DISEASES) {
     if (lower.includes(d)) return d.charAt(0).toUpperCase() + d.slice(1);
   }
-  // fallback — pega a primeira palavra significativa
+  // fallback — pega as primeiras palavras significativas
   return title.split(" ").slice(0, 2).join(" ");
 }
 
-// Coordenadas aproximadas por país (África) — expande conforme necessário
+// ─── Coordenadas por país (África) ──────────────────────────────────────
 const COUNTRY_COORDS: Record<string, [number, number]> = {
   "Democratic Republic of the Congo": [-4.0383, 21.7587],
   Congo: [-0.228, 15.8277],
@@ -75,17 +92,36 @@ const COUNTRY_COORDS: Record<string, [number, number]> = {
   "Côte d'Ivoire": [7.54, -5.5471],
 };
 
-interface ReliefWebReport {
-  id: number;
-  fields: {
-    title: string;
-    date: { original: string };
-    country: Array<{ name: string; iso3?: string }>;
-    source: Array<{ name: string }>;
-    url_alias?: string;
-    status?: string;
-  };
+// País conhecidos de África — usado para filtrar resultados "World" etc.
+const AFRICAN_COUNTRIES = new Set(Object.keys(COUNTRY_COORDS));
+
+// ─── Extracção de país a partir do HTML da description ──────────────────
+function extractCountryFromDesc(desc: string): string {
+  // O RSS embute "Country: XYZ" dentro do HTML da description
+  const match = desc.match(/Country:\s*([^<]+)/i);
+  if (match) return match[1].trim();
+  return "Unknown";
 }
+
+function extractSourceFromDesc(desc: string): string {
+  const match = desc.match(/Sources?:\s*([^<]+)/i);
+  if (match) return match[1].trim().split(",")[0].trim();
+  return "ReliefWeb";
+}
+
+// ─── Parser RSS ─────────────────────────────────────────────────────────
+interface RSSItem {
+  title: string;
+  link: string;
+  guid: string | { "#text": string };
+  pubDate: string;
+  description: string;
+}
+
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@_",
+});
 
 export async function fetchOutbreaksFromReliefWeb(options?: {
   limit?: number;
@@ -93,83 +129,122 @@ export async function fetchOutbreaksFromReliefWeb(options?: {
   disease?: string;
 }): Promise<{ outbreaks: Outbreak[]; total: number }> {
   const limit = options?.limit ?? 20;
-  const offset = ((options?.page ?? 1) - 1) * limit;
+  const page = options?.page ?? 1;
 
-  // Query para buscar disease outbreaks em África
-  const body = {
-    query: {
-      value: options?.disease
-        ? `${options.disease} outbreak africa`
-        : "disease outbreak africa cholera malaria ebola",
-      operator: "OR",
-    },
-    filter: {
-      conditions: [
-        {
-          field: "primary_country.region.name",
-          value: [
-            "Africa",
-            "Eastern Africa",
-            "Western Africa",
-            "Central Africa",
-            "Southern Africa",
-            "Northern Africa",
-          ],
-          operator: "OR",
-        },
-      ],
-    },
-    fields: {
-      include: [
-        "title",
-        "date.original",
-        "country",
-        "source",
-        "url_alias",
-        "status",
-      ],
-    },
-    sort: ["date.original:desc"],
-    limit,
-    offset,
-  };
+  // Construir URL do RSS com filtro de search
+  // (C10) = região "Eastern Africa" — mas na verdade o RSS não suporta
+  // filtros complexos por região, só search text. Filtramos depois.
+  const searchQuery = options?.disease
+    ? `${options.disease} outbreak`
+    : "outbreak";
 
-  const res = await fetch(`${RELIEFWEB_API}/reports?appname=${APP_NAME}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    next: { revalidate: 3600 }, // ISR: cache por 1 hora
-  });
+  const url = `${RELIEFWEB_RSS}?search=${encodeURIComponent(searchQuery)}&limit=50`;
 
-  if (!res.ok) {
-    throw new Error(`ReliefWeb API deu pau: ${res.status} ${res.statusText}`);
+  // Node.js fetch é bloqueado pelo Cloudflare (TLS fingerprint de bot).
+  // curl funciona porque tem fingerprint TLS normal.
+  let xml: string;
+  try {
+    xml = execSync(
+      `curl -s --max-time 15 "${url}" -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" -H "Accept: application/xml, text/xml, */*"`,
+      { encoding: "utf-8", timeout: 20_000 },
+    );
+  } catch (err) {
+    throw new Error(
+      `Falha ao buscar dados do ReliefWeb: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 
-  const json = await res.json();
-  const reports: ReliefWebReport[] = json.data ?? [];
-  const total: number = json.totalCount ?? 0;
+  if (!xml || xml.includes('"error"')) {
+    throw new Error(`ReliefWeb RSS bloqueado ou indisponível`);
+  }
 
-  const outbreaks: Outbreak[] = reports.map((report) => {
-    const f = report.fields;
-    const countryName = f.country?.[0]?.name ?? "Unknown";
-    const coords = COUNTRY_COORDS[countryName];
+  const parsed = xmlParser.parse(xml);
 
-    return {
-      id: String(report.id),
-      title: f.title,
-      disease: extractDisease(f.title),
-      country: countryName,
-      countryCode: f.country?.[0]?.iso3 ?? "",
-      region: "Africa", // pode melhorar com lookup
-      date: f.date?.original ?? new Date().toISOString(),
-      status: "active", // ReliefWeb não tem status direto; pode filtrar por keywords
-      severity: getSeverity(f.title),
-      source: f.source?.[0]?.name ?? "ReliefWeb",
-      url: f.url_alias ?? `https://reliefweb.int/report/${report.id}`,
-      lat: coords?.[0],
-      lng: coords?.[1],
-    };
-  });
+
+  const items: RSSItem[] = parsed?.rss?.channel?.item ?? [];
+
+  // Converter itens RSS → Outbreak[], filtrar para África
+  const allOutbreaks: Outbreak[] = [];
+
+  for (const item of items) {
+    const title = item.title ?? "";
+    const description = item.description ?? "";
+    const countryName = extractCountryFromDesc(description);
+    const link =
+      typeof item.guid === "object" ? item.guid["#text"] : item.link;
+
+    // Filtrar: só países africanos (ignorar "World", etc.)
+    if (countryName === "Unknown" || countryName === "World") {
+      // Tentar extrair país do título
+      const titleCountry = findAfricanCountryInText(title);
+      if (!titleCountry) continue;
+      // Usar o país do título
+      const coords = COUNTRY_COORDS[titleCountry];
+      allOutbreaks.push({
+        id: generateId(link),
+        title,
+        disease: extractDisease(title),
+        country: titleCountry,
+        countryCode: "",
+        region: "Africa",
+        date: item.pubDate ?? new Date().toISOString(),
+        status: "active",
+        severity: getSeverity(title),
+        source: extractSourceFromDesc(description),
+        url: link,
+        lat: coords?.[0],
+        lng: coords?.[1],
+      });
+    } else if (AFRICAN_COUNTRIES.has(countryName)) {
+      const coords = COUNTRY_COORDS[countryName];
+      allOutbreaks.push({
+        id: generateId(link),
+        title,
+        disease: extractDisease(title),
+        country: countryName,
+        countryCode: "",
+        region: "Africa",
+        date: item.pubDate ?? new Date().toISOString(),
+        status: "active",
+        severity: getSeverity(title),
+        source: extractSourceFromDesc(description),
+        url: link,
+        lat: coords?.[0],
+        lng: coords?.[1],
+      });
+    }
+    // Se não é país africano, ignorar silenciosamente
+  }
+
+  // Paginação manual
+  const total = allOutbreaks.length;
+  const offset = (page - 1) * limit;
+  const outbreaks = allOutbreaks.slice(offset, offset + limit);
 
   return { outbreaks, total };
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+function generateId(link: string): string {
+  // Extrair ID numérico do link, ou usar hash simples
+  const match = link.match(/\/(\d+)$/);
+  if (match) return match[1];
+  // fallback: hash simples do link
+  let hash = 0;
+  for (let i = 0; i < link.length; i++) {
+    hash = (hash << 5) - hash + link.charCodeAt(i);
+    hash |= 0;
+  }
+  return String(Math.abs(hash));
+}
+
+function findAfricanCountryInText(text: string): string | null {
+  for (const country of AFRICAN_COUNTRIES) {
+    if (text.includes(country)) return country;
+  }
+  // Tentar abreviações comuns
+  if (text.includes("DR Congo") || text.includes("DRC"))
+    return "Democratic Republic of the Congo";
+  if (text.includes("CAR")) return "Central African Republic";
+  return null;
 }
