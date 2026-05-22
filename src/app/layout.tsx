@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Surge Monitor",
   description: "Monitor de surtos de doenças em África",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -40,7 +43,9 @@ export default function RootLayout({
         >
           <div className="flex flex-col h-screen">
             <Header />
-            <main className="flex-1 h-full">{children}</main>
+            <main className="flex-1 h-full pt-10 bg-paper text-on-paper">
+              {children}
+            </main>
             <Footer />
           </div>
         </ThemeProvider>

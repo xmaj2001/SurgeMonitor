@@ -14,7 +14,7 @@ const navLinks = [
   { name: "Mapa", href: "/map" },
 ];
 
-export function Header() {
+export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -49,12 +49,11 @@ export function Header() {
             <Image
               src="/logo_white.png"
               alt="Surge Monitor"
-              width={40}
-              height={40}
-              className="bg-black rounded-full"
+              width={25}
+              height={25}
             />
             <span
-              className={`font-display tracking-tight transition-all duration-500 ${isScrolled ? "text-xl text-foreground" : "text-2xl text-black dark:text-white/70"}`}
+              className={`font-display tracking-tight transition-all duration-500 ${isScrolled ? "text-xl text-foreground" : "text-2xl text-gray-400"}`}
             >
               Surge Monitor
             </span>
@@ -66,7 +65,7 @@ export function Header() {
               <a
                 key={link.name}
                 href={link.href}
-                className={`text-sm transition-colors duration-300 relative group ${isScrolled ? "text-foreground/70 hover:text-foreground" : "text-black dark:text-white/70 hover:text-white"}`}
+                className={`text-sm transition-colors duration-300 relative group ${isScrolled ? "text-foreground/70 hover:text-foreground" : "text-white/70 hover:text-white"}`}
               >
                 {link.name}
                 <span
@@ -83,7 +82,7 @@ export function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Github"
-              className={`flex items-center gap-2 transition-all duration-500 ${isScrolled ? "text-xs text-foreground/70 hover:text-foreground" : "text-sm text-black dark:text-white/70 hover:text-white"}`}
+              className={`flex items-center gap-2 transition-all duration-500 ${isScrolled ? "text-xs text-foreground/70 hover:text-foreground" : "text-sm text-white/70 hover:text-white"}`}
             >
               <span>Github</span>
             </Link>
