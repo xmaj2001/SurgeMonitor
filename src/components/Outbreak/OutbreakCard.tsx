@@ -1,10 +1,11 @@
 import { Outbreak } from "@/lib/types";
+import { countryCodeToFlag } from "@/lib/flags";
 
 const severityStyles = {
-  critical: "border-red-500 bg-red-950/40",
-  high: "border-orange-500 bg-orange-950/30",
-  medium: "border-yellow-600 bg-yellow-950/20",
-  low: "border-zinc-600 bg-zinc-900",
+  critical: "border-red-500",
+  high: "border-orange-500",
+  medium: "border-yellow-600",
+  low: "border-zinc-600",
 };
 
 const severityBadge = {
@@ -21,25 +22,34 @@ export default function OutbreakCard({ outbreak }: { outbreak: Outbreak }) {
     year: "numeric",
   });
 
+  const flag = countryCodeToFlag(outbreak.countryCode);
+
   return (
     <a
       href={outbreak.url}
       target="_blank"
       rel="noopener noreferrer"
       className={`
-        block border rounded-xl p-4 mb-3 transition-all hover:opacity-80
+        block border rounded-xs p-4 mb-3 transition-all hover:opacity-80
         ${severityStyles[outbreak.severity]}
       `}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">
-            {outbreak.title}
-          </p>
-          <p className="text-xs text-zinc-400 mt-1">
-            {outbreak.country} · {dateStr}
-          </p>
-          <p className="text-xs text-zinc-500 mt-0.5">{outbreak.source}</p>
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {/* Bandeira do país */}
+          <span className="text-2xl leading-none shrink-0 mt-0.5" aria-label={outbreak.country}>
+            {flag}
+          </span>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold dark:text-white text-black truncate">
+              {outbreak.title}
+            </p>
+            <p className="text-xs text-zinc-400 mt-1">
+              {outbreak.country} · {dateStr}
+            </p>
+            <p className="text-xs text-zinc-500 mt-0.5">{outbreak.source}</p>
+          </div>
         </div>
 
         <div className="flex flex-col items-end gap-1 shrink-0">

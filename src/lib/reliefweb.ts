@@ -55,44 +55,48 @@ function extractDisease(title: string): string {
   return title.split(" ").slice(0, 2).join(" ");
 }
 
-// ─── Coordenadas por país (África) ──────────────────────────────────────
-const COUNTRY_COORDS: Record<string, [number, number]> = {
-  "Democratic Republic of the Congo": [-4.0383, 21.7587],
-  Congo: [-0.228, 15.8277],
-  Nigeria: [9.082, 8.6753],
-  Ethiopia: [9.145, 40.4897],
-  Kenya: [-0.0236, 37.9062],
-  Uganda: [1.3733, 32.2903],
-  Tanzania: [-6.369, 34.8888],
-  Sudan: [12.8628, 30.2176],
-  Somalia: [5.1521, 46.1996],
-  Mozambique: [-18.6657, 35.5296],
-  Zimbabwe: [-19.0154, 29.1549],
-  Zambia: [-13.1339, 27.8493],
-  Angola: [-11.2027, 17.8739],
-  Cameroon: [3.848, 11.5021],
-  Ghana: [7.9465, -1.0232],
-  Senegal: [14.4974, -14.4524],
-  Mali: [17.5707, -3.9962],
-  Niger: [17.6078, 8.0817],
-  Chad: [15.4542, 18.7322],
-  Guinea: [9.9456, -11.3247],
-  "Sierra Leone": [8.4606, -11.7799],
-  Liberia: [6.4281, -9.4295],
-  Rwanda: [-1.9403, 29.8739],
-  Burundi: [-3.3731, 29.9189],
-  Madagascar: [-18.7669, 46.8691],
-  Malawi: [-13.2543, 34.3015],
-  "South Sudan": [6.877, 31.307],
-  "Central African Republic": [6.6111, 20.9394],
-  Gabon: [-0.8037, 11.6094],
-  Togo: [8.6195, 0.8248],
-  "Burkina Faso": [12.3641, -1.5197],
-  "Côte d'Ivoire": [7.54, -5.5471],
-};
+// ─── Dados por país (África) — coordenadas + código ISO alpha-2 ─────────
+const COUNTRY_DATA: Record<string, { coords: [number, number]; code: string }> =
+  {
+    "Democratic Republic of the Congo": {
+      coords: [-4.0383, 21.7587],
+      code: "CD",
+    },
+    Congo: { coords: [-0.228, 15.8277], code: "CG" },
+    Nigeria: { coords: [9.082, 8.6753], code: "NG" },
+    Ethiopia: { coords: [9.145, 40.4897], code: "ET" },
+    Kenya: { coords: [-0.0236, 37.9062], code: "KE" },
+    Uganda: { coords: [1.3733, 32.2903], code: "UG" },
+    Tanzania: { coords: [-6.369, 34.8888], code: "TZ" },
+    Sudan: { coords: [12.8628, 30.2176], code: "SD" },
+    Somalia: { coords: [5.1521, 46.1996], code: "SO" },
+    Mozambique: { coords: [-18.6657, 35.5296], code: "MZ" },
+    Zimbabwe: { coords: [-19.0154, 29.1549], code: "ZW" },
+    Zambia: { coords: [-13.1339, 27.8493], code: "ZM" },
+    Angola: { coords: [-11.2027, 17.8739], code: "AO" },
+    Cameroon: { coords: [3.848, 11.5021], code: "CM" },
+    Ghana: { coords: [7.9465, -1.0232], code: "GH" },
+    Senegal: { coords: [14.4974, -14.4524], code: "SN" },
+    Mali: { coords: [17.5707, -3.9962], code: "ML" },
+    Niger: { coords: [17.6078, 8.0817], code: "NE" },
+    Chad: { coords: [15.4542, 18.7322], code: "TD" },
+    Guinea: { coords: [9.9456, -11.3247], code: "GN" },
+    "Sierra Leone": { coords: [8.4606, -11.7799], code: "SL" },
+    Liberia: { coords: [6.4281, -9.4295], code: "LR" },
+    Rwanda: { coords: [-1.9403, 29.8739], code: "RW" },
+    Burundi: { coords: [-3.3731, 29.9189], code: "BI" },
+    Madagascar: { coords: [-18.7669, 46.8691], code: "MG" },
+    Malawi: { coords: [-13.2543, 34.3015], code: "MW" },
+    "South Sudan": { coords: [6.877, 31.307], code: "SS" },
+    "Central African Republic": { coords: [6.6111, 20.9394], code: "CF" },
+    Gabon: { coords: [-0.8037, 11.6094], code: "GA" },
+    Togo: { coords: [8.6195, 0.8248], code: "TG" },
+    "Burkina Faso": { coords: [12.3641, -1.5197], code: "BF" },
+    "Côte d'Ivoire": { coords: [7.54, -5.5471], code: "CI" },
+  };
 
 // País conhecidos de África — usado para filtrar resultados "World" etc.
-const AFRICAN_COUNTRIES = new Set(Object.keys(COUNTRY_COORDS));
+const AFRICAN_COUNTRIES = new Set(Object.keys(COUNTRY_DATA));
 
 // ─── Extracção de país a partir do HTML da description ──────────────────
 function extractCountryFromDesc(desc: string): string {
@@ -176,38 +180,38 @@ export async function fetchOutbreaksFromReliefWeb(options?: {
       const titleCountry = findAfricanCountryInText(title);
       if (!titleCountry) continue;
       // Usar o país do título
-      const coords = COUNTRY_COORDS[titleCountry];
+      const data = COUNTRY_DATA[titleCountry];
       allOutbreaks.push({
         id: generateId(link),
         title,
         disease: extractDisease(title),
         country: titleCountry,
-        countryCode: "",
+        countryCode: data?.code ?? "",
         region: "Africa",
         date: item.pubDate ?? new Date().toISOString(),
         status: "active",
         severity: getSeverity(title),
         source: extractSourceFromDesc(description),
         url: link,
-        lat: coords?.[0],
-        lng: coords?.[1],
+        lat: data?.coords[0],
+        lng: data?.coords[1],
       });
     } else if (AFRICAN_COUNTRIES.has(countryName)) {
-      const coords = COUNTRY_COORDS[countryName];
+      const data = COUNTRY_DATA[countryName];
       allOutbreaks.push({
         id: generateId(link),
         title,
         disease: extractDisease(title),
         country: countryName,
-        countryCode: "",
+        countryCode: data?.code ?? "",
         region: "Africa",
         date: item.pubDate ?? new Date().toISOString(),
         status: "active",
         severity: getSeverity(title),
         source: extractSourceFromDesc(description),
         url: link,
-        lat: coords?.[0],
-        lng: coords?.[1],
+        lat: data?.coords[0],
+        lng: data?.coords[1],
       });
     }
     // Se não é país africano, ignorar silenciosamente

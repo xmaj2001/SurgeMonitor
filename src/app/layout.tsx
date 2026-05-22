@@ -41,9 +41,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex flex-col h-screen">
+          <div className="flex flex-col h-screen order-last">
             <Header />
-            <main className="flex-1 h-full pt-10 bg-paper text-on-paper">
+            <main className="flex-1  pt-10 bg-paper text-on-paper order-2">
               {children}
             </main>
             <Footer />

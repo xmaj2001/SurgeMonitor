@@ -10,7 +10,7 @@ import { ModeToggle } from "./ModeToggle";
 const navLinks = [
   { name: "Home", href: "/" },
   { name: "Feed", href: "/feed" },
-  { name: "Alerts", href: "/alerts" },
+  { name: "Outbreak", href: "/outbreak" },
   { name: "Mapa", href: "/map" },
 ];
 
@@ -28,7 +28,7 @@ export function Header() {
 
   return (
     <header
-      className={`fixed z-50 transition-all duration-500 ${
+      className={`order-1 fixed z-50 transition-all duration-500 ${
         isScrolled ? "top-4 left-4 right-4" : "top-0 left-0 right-0"
       }`}
     >

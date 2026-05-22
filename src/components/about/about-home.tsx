@@ -23,7 +23,7 @@ export function AboutHome() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 mt-6">
-        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm flex flex-col gap-3 transition-colors hover:border-primary/50">
+        <div className="p-6 rounded-xs bg-card border border-border shadow-sm flex flex-col gap-3 transition-colors hover:border-primary/50">
           <Activity className="w-6 h-6 text-primary" />
           <h3 className="font-semibold text-lg text-card-foreground">
             Dados em Tempo Real
@@ -34,7 +34,7 @@ export function AboutHome() {
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm flex flex-col gap-3 transition-colors hover:border-primary/50">
+        <div className="p-6 rounded-xs bg-card border border-border shadow-sm flex flex-col gap-3 transition-colors hover:border-primary/50">
           <Globe className="w-6 h-6 text-primary" />
           <h3 className="font-semibold text-lg text-card-foreground">
             Foco Regional
@@ -45,7 +45,7 @@ export function AboutHome() {
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm flex flex-col gap-3 transition-colors hover:border-primary/50">
+        <div className="p-6 rounded-xs bg-card border border-border shadow-sm flex flex-col gap-3 transition-colors hover:border-primary/50">
           <ShieldAlert className="w-6 h-6 text-primary" />
           <h3 className="font-semibold text-lg text-card-foreground">
             Apoio à Decisão
@@ -57,7 +57,7 @@ export function AboutHome() {
         </div>
       </div>
 
-      <div className="mt-8 p-6 md:p-8 bg-secondary/30 rounded-2xl border border-border">
+      <div className="mt-8 p-6 md:p-8 bg-secondary/30 rounded-xs border border-border">
         <h2 className="text-xl font-serif text-foreground mb-3">
           Estado do Projeto
         </h2>

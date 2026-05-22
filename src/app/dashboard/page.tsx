@@ -1,7 +1,7 @@
 import { fetchOutbreaksFromReliefWeb } from "@/lib/reliefweb";
 import { Suspense } from "react";
 import OutbreakCard from "@/components/Outbreak/OutbreakCard";
-import AlertFeed from "@/components/Outbreak/AlertFeed";
+import AlertFeed from "@/components/Outbreak/OutbreakFilter";
 
 // Dinâmico — nunca pre-renderizar no build (depende de curl + API externa)
 export const dynamic = "force-dynamic";
